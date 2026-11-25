@@ -80,7 +80,7 @@ Kalau hasilnya `audio 0 sample`, lihat bagian **DAVE** di bawah.
 | `/leave` | Keluar dari voice |
 | `/mode auto\|panggil` | Jawab setiap ucapan, atau hanya saat namanya disebut |
 | `/transcript nyala\|mati` | Kirim transkrip tiap giliran ke text channel |
-| `/status` | Latensi STT/LLM/TTS, klip diabaikan, sisa anggaran suara |
+| `/status` | Latensi STT/LLM/TTS, pemakaian OpenRouter hari ini (request + token), klip diabaikan, sisa anggaran suara |
 | `/persona [teks]` | Lihat/ubah kepribadian (butuh *Manage Server*), berlaku langsung |
 | `/reset` | Hapus riwayat + memori percakapan |
 
@@ -155,7 +155,8 @@ murah berbayar karena batas `:free` terlalu kecil untuk ngobrol lama.
 ## 10. State
 
 `state.json` (bisa dipindah lewat `STATE_FILE`) menyimpan per guild: persona, mode, transkrip,
-memori percakapan, dan pemakaian karakter TTS hari ini. File ini di-`.gitignore` dan aman dihapus
+memori percakapan, pemakaian karakter TTS hari ini, serta jumlah request + token OpenRouter hari ini
+(reset otomatis saat ganti hari UTC). File ini di-`.gitignore` dan aman dihapus
 kalau mau memulai dari nol.
 
 ## 11. Troubleshooting

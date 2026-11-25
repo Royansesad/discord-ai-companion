@@ -1,5 +1,6 @@
 import { openRouterConfig } from '../config.js';
 import { log } from '../log.js';
+import { addLlmUsage } from '../store.js';
 import { RetryableError, retryAfterFromHeaders, withRetry } from '../util/retry.js';
 
 export type ChatRole = 'system' | 'user' | 'assistant';
@@ -13,6 +14,7 @@ const ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions';
 interface CompletionResponse {
   choices?: { message?: { content?: string | null } }[];
   error?: { message?: string; code?: number | string };
+  usage?: { prompt_tokens?: number; completion_tokens?: number };
 }
 
 /**
@@ -27,33 +29,49 @@ export async function chat(messages: ChatMessage[], maxTokens = 220): Promise<st
   for (const model of models) {
     try {
       const reply = await withRetry(`openrouter:${model}`, async () => {
-        const response = await fetch(ENDPOINT, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${config.apiKey}`,
-            'Content-Type': 'application/json',
-            'X-Title': 'discord-ai-companion',
-          },
-          body: JSON.stringify({
-            model,
-            messages,
-            max_tokens: maxTokens,
-            temperature: 0.8,
-            stream: false,
-          }),
-        });
+        // Dihitung sebelum dikirim: batas OpenRouter berlaku per request, termasuk yang gagal.
+        addLlmUsage({ requests: 1 });
+
+        let response: Response;
+        try {
+          response = await fetch(ENDPOINT, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${config.apiKey}`,
+              'Content-Type': 'application/json',
+              'X-Title': 'discord-ai-companion',
+            },
+            body: JSON.stringify({
+              model,
+              messages,
+              max_tokens: maxTokens,
+              temperature: 0.8,
+              stream: false,
+            }),
+          });
+        } catch (error) {
+          addLlmUsage({ failures: 1 });
+          throw error;
+        }
 
         if (response.status === 429 || response.status >= 500) {
+          addLlmUsage({ failures: 1 });
           throw new RetryableError(
             `OpenRouter HTTP ${response.status}`,
             retryAfterFromHeaders(response.headers),
           );
         }
 
-        const payload = (await response.json()) as CompletionResponse;
+        const payload = (await response.json().catch(() => ({}))) as CompletionResponse;
         if (!response.ok) {
+          addLlmUsage({ failures: 1 });
           throw new Error(payload.error?.message ?? `OpenRouter HTTP ${response.status}`);
         }
+
+        addLlmUsage({
+          promptTokens: payload.usage?.prompt_tokens ?? 0,
+          completionTokens: payload.usage?.completion_tokens ?? 0,
+        });
 
         const content = payload.choices?.[0]?.message?.content?.trim() ?? '';
         if (!content) throw new Error('OpenRouter mengembalikan balasan kosong');

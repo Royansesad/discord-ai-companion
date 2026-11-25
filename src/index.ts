@@ -18,6 +18,8 @@ import { VoiceSession, type CompanionMode } from './voice/session.js';
 
 const sessions = new Map<string, VoiceSession>();
 
+const formatCount = (value: number): string => value.toLocaleString('id-ID');
+
 const MODE_LABEL: Record<CompanionMode, string> = {
   auto: 'auto — menjawab setiap ucapan',
   mention: 'panggil — hanya menjawab kalau namanya disebut',
@@ -254,6 +256,10 @@ async function handleStatus(interaction: ChatInputCommandInteraction): Promise<v
     `Peserta: ${status.participants.length > 0 ? status.participants.join(', ') : '(kosong)'}`,
     `Antrean TTS: ${status.queued}${status.speaking ? ' (sedang bicara)' : ''} · riwayat ${status.historyTurns} giliran${status.hasMemory ? ' + memori' : ''}`,
     `STT ${status.stt.count}x (${status.stt.lastMs} ms, ${status.stt.errors} error) · LLM ${status.llm.count}x (${status.llm.lastMs} ms, ${status.llm.errors} error) · TTS ${status.tts.count}x (${status.tts.lastMs} ms, ${status.tts.errors} error)`,
+    `OpenRouter ${status.llm.daily.day || 'hari ini'}: ${formatCount(status.llm.daily.requests)} request` +
+      `${status.llm.daily.failures > 0 ? ` (${formatCount(status.llm.daily.failures)} gagal)` : ''}` +
+      ` · ${formatCount(status.llm.daily.promptTokens + status.llm.daily.completionTokens)} token` +
+      ` (${formatCount(status.llm.daily.promptTokens)} masuk + ${formatCount(status.llm.daily.completionTokens)} keluar)`,
     `Klip diabaikan: ${status.ignored.short} pendek, ${status.ignored.echo} gema, ${status.ignored.notAddressed} tidak dipanggil`,
     `TTS: ${status.tts.providers.join(' → ') || 'belum siap'} · ${budget}`,
     `Sambung ulang: ${status.reconnects}x`,

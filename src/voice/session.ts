@@ -12,7 +12,13 @@ import { voiceConfig } from '../config.js';
 import { chat, summarize, type ChatMessage } from '../llm/openrouter.js';
 import { log } from '../log.js';
 import { buildSystemPrompt } from '../persona.js';
-import { getGuildSettings, updateGuildSettings, type StoredTurn } from '../store.js';
+import {
+  getGuildSettings,
+  llmUsage,
+  updateGuildSettings,
+  type LlmUsage,
+  type StoredTurn,
+} from '../store.js';
 import { transcribe } from '../stt/groq.js';
 import { TtsBudgetError, synthesize, ttsStatus } from '../tts/index.js';
 import { PlaybackQueue } from './playback.js';
@@ -48,7 +54,7 @@ export interface SessionStatus {
   hasMemory: boolean;
   ignored: { short: number; echo: number; notAddressed: number };
   stt: { count: number; errors: number; lastMs: number };
-  llm: { count: number; errors: number; lastMs: number };
+  llm: { count: number; errors: number; lastMs: number; daily: LlmUsage };
   tts: { count: number; errors: number; lastMs: number } & {
     providers: string[];
     limit: number;
@@ -205,7 +211,12 @@ export class VoiceSession {
         notAddressed: this.stats.ignoredNotAddressed,
       },
       stt: { count: this.stats.sttCount, errors: this.stats.sttErrors, lastMs: this.stats.sttMs },
-      llm: { count: this.stats.llmCount, errors: this.stats.llmErrors, lastMs: this.stats.llmMs },
+      llm: {
+        count: this.stats.llmCount,
+        errors: this.stats.llmErrors,
+        lastMs: this.stats.llmMs,
+        daily: llmUsage(),
+      },
       tts: {
         count: this.stats.ttsCount,
         errors: this.stats.ttsErrors,
